@@ -2,6 +2,7 @@ import type { DBModelProperties } from "@neisanworks/neisandb"
 import z from "zod/v4"
 import { CreateEventSchema } from "$lib/remote/event.utils";
 import { AddressModel } from "$lib/remote/$common";
+import { formatDate } from "$lib/utils/common";
 
 export const EventAttendeeSchema = z.object({
     user: z.number().min(0).optional(),
@@ -36,7 +37,11 @@ export class EventModel implements DBModelProperties<EventSchema> {
     creator: number
     date: Date
     time: string
-    address: AddressModel
+    addressline1: string
+    addressline2?: string
+    city: string
+    state: string
+    zip: string
     moderators: Array<number>
     attendees: Array<EventAttendantModel>
     private: boolean
@@ -45,12 +50,30 @@ export class EventModel implements DBModelProperties<EventSchema> {
         this.id = id
         this.title = data.title
         this.creator = data.creator
-        this.date = data.date
+        this.date = new Date(data.date)
         this.time = data.time
-        this.address = new AddressModel(data.address)
+        this.addressline1 = data.addressline1
+        this.addressline2 = data.addressline2
+        this.city = data.city
+        this.state = data.state
+        this.zip = data.zip
         this.moderators = data.moderators
         this.attendees = data.attendees.map((attendee) => new EventAttendantModel(attendee));
         this.private = data.private
+    }
+
+    get address(): AddressModel {
+        return new AddressModel({
+            addressline1: this.addressline1,
+            addressline2: this.addressline2,
+            city: this.city,
+            state: this.state,
+            zip: this.zip
+        })
+    }
+
+    get addressString(): string {
+        return `${this.addressline1}${this.addressline2 ? `, ${this.addressline2}` : ''}, ${this.city}, ${this.state} ${this.zip}`
     }
 
     get items(): Array<string> {
@@ -59,5 +82,17 @@ export class EventModel implements DBModelProperties<EventSchema> {
 
     get totalAttendees(): number {
         return this.attendees.reduce((total, attendee) => total + attendee.total, 0);
+    }
+
+    get json() {
+        const parse = EventSchema.safeParse(this);
+        if (!parse.success) throw new Error(parse.error.message);
+        return {
+            ...parse.data,
+            date: formatDate(this.date),
+            totalAttendees: this.totalAttendees,
+            items: this.items,
+            addressString: this.addressString
+        }
     }
 }

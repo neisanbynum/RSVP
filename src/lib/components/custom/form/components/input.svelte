@@ -58,7 +58,7 @@
 			aria-describedby="{name}-form-description"
 			aria-invalid={form.errors.has(name)}
 			value={form.values.get(name)}
-			class="w-full"
+			class="w-full h-10"
 		/>
 		<EyeIcon
 			class={cn(

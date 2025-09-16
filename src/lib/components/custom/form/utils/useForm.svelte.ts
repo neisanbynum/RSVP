@@ -20,7 +20,7 @@ class FormManager<T extends z.ZodObject, R> {
 		| RemoteQueryFunction<z.core.output<T>, Promise<R>>
 		| RemoteCommand<z.infer<T>, Promise<R>>;
 	private onsuccess?: (arg: R) => void | Promise<void>;
-	private onerror?: (message: string) => void | Promise<void>;
+	private onerror?: (error: any) => void | Promise<void>;
 	private debug: boolean;
 
 	values = new SvelteMap();
@@ -82,6 +82,7 @@ class FormManager<T extends z.ZodObject, R> {
 	};
 
 	onblur = (name: keyof z.infer<T>) => {
+		console.log({ [name]: this.values.get(name) });
 		if (this.validation === 'onblur' && !!this.values.get(name)) this.validate(name);
 		if (this.debug) console.log({ [name]: this.values.get(name) });
 	};
@@ -90,13 +91,11 @@ class FormManager<T extends z.ZodObject, R> {
 		const controller = new AbortController();
 		const { signal } = controller;
 
-
 		return (node) => {
 			if (!this.values.get(name)) {
-				if (this.debug) console.log(`initializing ${name.toString()}`)
 				this.values.set(name, node.value ?? this.initial[name]);
 				this.validate(name);
-			};
+			}
 
 			node.addEventListener('focus', () => this.onfocus(name), { signal });
 			node.addEventListener('input', () => this.onvaluechange(name, node.value), { signal });
@@ -125,7 +124,7 @@ class FormManager<T extends z.ZodObject, R> {
 			return;
 		}
 
-		if (this.debug) console.log(parse.data)
+		if (this.debug) console.log(parse.data);
 
 		try {
 			const response = await this.remotefunction(parse.data);
@@ -135,10 +134,15 @@ class FormManager<T extends z.ZodObject, R> {
 
 			this.onsuccess?.(response);
 		} catch (error: any) {
+			if (this.onerror) {
+				this.onerror(error);
+				return;
+			}
+
 			const message = isHttpError(error) ? error.body.message : error.message;
 			if (this.debug) console.log({ error, message });
 
-			this.onerror ? this.onerror(message) : toast.error(message);
+			toast.error(message);
 		}
 	};
 }

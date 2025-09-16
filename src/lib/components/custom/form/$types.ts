@@ -13,7 +13,7 @@ export type useFormParameters<T extends z.ZodObject, R> = {
 		| RemoteQueryFunction<z.infer<T>, Promise<R>>
 		| RemoteCommand<z.infer<T>, Promise<R>>;
 	onsuccess?: (args: R) => void | Promise<void>;
-	onerror?: (message: string) => void | Promise<void>;
+	onerror?: (error: any) => void | Promise<void>;
 	debug?: boolean;
 };
 

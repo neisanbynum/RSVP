@@ -24,8 +24,12 @@
 			<!-- <Text text="Event RSVP" class="font-semibold" /> -->
 			<svelte:boundary>
 				{@const username = await userName()}
-				<Text text="User:" class="font-semibold" />
-				<Text text={username} />
+				{#if username}
+					<Text text="User:" class="font-semibold" />
+					<Text text={username} />
+				{:else}
+					<Text text={'Event RSVP'} class="font-semibold" />
+				{/if}
 
 				{#snippet pending()}
 					<Text text={'Event RSVP'} class="font-semibold" />

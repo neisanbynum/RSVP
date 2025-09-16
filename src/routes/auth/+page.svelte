@@ -18,8 +18,7 @@
 			toast.success(message);
 			await userName().refresh();
 			goto('/event/upcoming');
-		},
-		debug: true
+		}
 	});
 </script>
 

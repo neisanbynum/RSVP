@@ -4,6 +4,10 @@ import { decrypt } from "$lib/utils/encryption/helpers";
 import z from "zod/v4"
 
 export const UserIDSchema = z.coerce.number('Invalid User ID').min(0);
+export function validUserID(data: unknown): data is number {
+    return UserIDSchema.safeParse(data).success;
+}
+
 export const SessionCookieSchema = z.object({
     userID: UserIDSchema,
     client: z.ipv4('Invalid IP Address').or(z.string())
