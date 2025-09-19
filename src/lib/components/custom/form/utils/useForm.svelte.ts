@@ -14,10 +14,10 @@ import type { Attachment } from 'svelte/attachments';
 
 class FormManager<T extends z.ZodObject, R> {
 	private schema: T;
-	private initial: z.infer<T>;
+	private initial: z.core.input<T>;
 	private validation: FormValidationAction;
 	private remotefunction:
-		| RemoteQueryFunction<z.core.output<T>, Promise<R>>
+		| RemoteQueryFunction<z.core.output<T>, R>
 		| RemoteCommand<z.infer<T>, Promise<R>>;
 	private onsuccess?: (arg: R) => void | Promise<void>;
 	private onerror?: (error: any) => void | Promise<void>;
@@ -93,7 +93,7 @@ class FormManager<T extends z.ZodObject, R> {
 
 		return (node) => {
 			if (!this.values.get(name)) {
-				this.values.set(name, node.value ?? this.initial[name]);
+				this.values.set(name, node.value ?? new Map(Object.entries(this.initial)).get(String(name)));
 				this.validate(name);
 			}
 

@@ -20,7 +20,7 @@ export const RegisterSchema = z
 	.object({
 		last: NameSchema('Invalid Last Name'),
 		first: NameSchema('Invalid First Name'),
-		middle: NameSchema('Invalid Middle Name').nullish(),
+		middle: NameSchema('Invalid Middle Name').optional(),
 		prefermiddle: z.boolean().default(false),
 		email: z.email('Invalid Email'),
 		phone: z.coerce

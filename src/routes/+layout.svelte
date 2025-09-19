@@ -2,12 +2,34 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { ModeWatcher } from 'mode-watcher';
-	import ThemeToggle from '../lib/components/routes/index/theme-toggle.svelte';
-	import Text from '$lib/components/custom/typography/text.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
-	import { userName } from '$lib/remote/auth.remote';
+	import Topbar from '../route-components/root/topbar.svelte';
+	import { setAppContext } from './layout-context.svelte';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
+	import { getUserName } from '$lib/remote/auth.remote';
+	import type { LayoutProps } from './$types';
+	import { onMount } from 'svelte';
 
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
+
+	let app = setAppContext();
+
+	const hydrate = async () => {
+		if (!app.username) {
+			getUserName().refresh();
+			app.username = await getUserName();
+		}
+	};
+
+	onMount(hydrate);
+	beforeNavigate(async (navigate) => {
+		console.log(navigate);
+		app.previousPage = navigate.from?.route.id
+		hydrate()
+	});
+
+	$inspect(app.username);
+	$inspect(app.previousPage);
 </script>
 
 <svelte:head>
@@ -17,28 +39,8 @@
 <ModeWatcher />
 <Toaster richColors position="top-right" />
 <div class="flex h-screen w-screen flex-col items-center justify-start">
-	<div
-		class="flex h-12 w-full items-center justify-between border-b-1 bg-neutral-100 p-4 dark:bg-black"
-	>
-		<div class="flex items-center justify-center gap-1">
-			<!-- <Text text="Event RSVP" class="font-semibold" /> -->
-			<svelte:boundary>
-				{@const username = await userName()}
-				{#if username}
-					<Text text="User:" class="font-semibold" />
-					<Text text={username} />
-				{:else}
-					<Text text={'Event RSVP'} class="font-semibold" />
-				{/if}
-
-				{#snippet pending()}
-					<Text text={'Event RSVP'} class="font-semibold" />
-				{/snippet}
-			</svelte:boundary>
-		</div>
-		<div><ThemeToggle /></div>
-	</div>
-	<div class="flex h-full w-full flex-col items-center justify-center">
+	<Topbar />
+	<div class="flex h-full w-full flex-col items-center justify-center overflow-hidden">
 		{@render children?.()}
 	</div>
 </div>

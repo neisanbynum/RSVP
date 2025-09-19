@@ -7,10 +7,10 @@ export type FormValidationAction = 'onchange' | 'onblur' | 'onsubmit' | 'none';
 
 export type useFormParameters<T extends z.ZodObject, R> = {
 	schema: T;
-	initial: z.infer<T>;
+	initial: z.core.input<T>;
 	validation?: FormValidationAction;
 	remotefunction:
-		| RemoteQueryFunction<z.infer<T>, Promise<R>>
+		| RemoteQueryFunction<z.infer<T>, R>
 		| RemoteCommand<z.infer<T>, Promise<R>>;
 	onsuccess?: (args: R) => void | Promise<void>;
 	onerror?: (error: any) => void | Promise<void>;

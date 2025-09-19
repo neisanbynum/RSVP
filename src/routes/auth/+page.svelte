@@ -3,9 +3,13 @@
 	import { HREF } from '$lib/components/custom';
 	import { FormInput, useForm } from '$lib/components/custom/form';
 	import { Button } from '$lib/components/ui/button';
-	import { login, userName } from '$lib/remote/auth.remote';
+	import { getUserName, login } from '$lib/remote/auth.remote';
 	import { LoginSchema } from '$lib/remote/auth.utils';
 	import { toast } from 'svelte-sonner';
+	import { getAppContext } from '../layout-context.svelte';
+	import { page } from '$app/state';
+
+	const app = getAppContext();
 
 	const form = useForm({
 		schema: LoginSchema,
@@ -16,8 +20,7 @@
 		remotefunction: login,
 		onsuccess: async ({ message }) => {
 			toast.success(message);
-			await userName().refresh();
-			goto('/event/upcoming');
+			goto(page.url.searchParams.get('redirectTo') ?? '/secured/event/upcoming');
 		}
 	});
 </script>

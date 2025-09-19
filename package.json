@@ -54,7 +54,7 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
-		"@neisanworks/neisandb": "^0.1.4",
+		"@neisanworks/neisandb": "^0.1.12",
 		"bcrypt": "^6.0.0",
 		"better-sqlite3": "^11.8.0",
 		"drizzle-orm": "^0.40.0",

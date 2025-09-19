@@ -1,53 +1,54 @@
 import { command, getRequestEvent, query } from '$app/server';
-import { error } from '@sveltejs/kit';
-import { Status } from '$lib/utils/endpoint/status';
+import { Profiles, SessionCookies, Users } from '$lib/server/neisandb';
 import { hash } from 'bcrypt';
-import { COOKIE_ENCRYPTION_KEY, PASSWORD_PEPPER, SESSION_COOKIE_KEY } from '$env/static/private';
-import { UserIDSchema, SessionCookieSchema, validUserID } from './$utils';
 import { LoginSchema, RegisterSchema } from './auth.utils';
-import { Profiles, Users } from '$lib/server/neisandb';
+import { COOKIE_ENCRYPTION_KEY, PASSWORD_PEPPER, SESSION_COOKIE_KEY } from '$env/static/private';
+import { Status } from '$lib/utils/endpoint/status';
+import { error } from '@sveltejs/kit';
+import { SessionCookieSchema, UserIDSchema, validUserID } from './$utils';
 import { decrypt, encrypt } from '$lib/utils/encryption/helpers';
 
-export const createSession = command(UserIDSchema, async (id) => {
-	const { cookies, getClientAddress } = getRequestEvent();
-	const validate = await SessionCookieSchema.safeParseAsync({
-		userID: id,
-		client: getClientAddress()
-	});
-	if (!validate.success) {
-		error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+const PROD = import.meta.env.MODE === 'production';
+
+export const register = command(
+	RegisterSchema,
+	async ({ last, first, middle, prefermiddle, email, phone, password }) => {
+		const user = Users.create({
+			email,
+			hashedpassword: await hash(password + PASSWORD_PEPPER, 10)
+		});
+		if (!user.success) {
+			error(
+				Status.CONFLICT,
+				'general' in user.errors ? user.errors.general : 'Failed to Create User'
+			);
+		}
+
+		const profile = Profiles.create({ last, first, middle, prefermiddle, email, phone });
+		if (!profile.success) {
+			error(
+				Status.CONFLICT,
+				'general' in profile.errors ? profile.errors.general : 'Failed to Create Profile'
+			);
+		}
+
+		return { message: `Account Created!` };
 	}
+);
 
-	const PROD = import.meta.env.MODE === 'production';
-	const encrypted = encrypt(JSON.stringify(validate.data), COOKIE_ENCRYPTION_KEY);
-	cookies.set(SESSION_COOKIE_KEY, encrypted, {
-		httpOnly: true,
-		path: '/',
-		expires: new Date(Date.now() + 1000 * 60 * 60)
-		// sameSite: PROD ? 'strict' : 'none',
-		// secure: PROD ? true : false
-	});
-});
-
-export const logout = command(() => {
-	const { cookies } = getRequestEvent();
-	cookies.delete(SESSION_COOKIE_KEY, { path: '/' });
-});
-
-export const login = command(LoginSchema, async (data) => {
-	const user = Users.findOne({ email: data.email });
-	const profile = Profiles.findOne({ email: data.email });
+export const login = command(LoginSchema, async ({ email, password }) => {
+	const user = Users.findOne({ email });
+	const profile = Profiles.findOne({ email });
 	if (!user || !profile) {
 		error(Status.UNAUTHORIZED, { message: 'Invalid Email Address/Password' });
 	}
 
-	const authenticated = await user.authenticate(data.password);
+	const authenticated = await user.authenticate(password);
 	if (!authenticated) {
 		user.attempts++;
 		const save = Users.save(user);
 		if (!save.success) {
-			if (import.meta.env.DEV) console.error(save.errors);
-			error(Status.INTERNAL_SERVER_ERROR, 'Failed to Update User');
+			error(Status.INTERNAL_SERVER_ERROR, 'Failed to Authenticate User');
 		}
 
 		error(Status.UNAUTHORIZED, { message: 'Invalid Email Address/Password' });
@@ -56,8 +57,7 @@ export const login = command(LoginSchema, async (data) => {
 	user.attempts = 0;
 	const save = Users.save(user);
 	if (!save.success) {
-		if (import.meta.env.DEV) console.error(save.errors);
-		error(Status.INTERNAL_SERVER_ERROR, 'Failed to Update User');
+		error(Status.INTERNAL_SERVER_ERROR, 'Failed to Authenticate User');
 	}
 
 	await createSession(user.id);
@@ -65,64 +65,111 @@ export const login = command(LoginSchema, async (data) => {
 	return { message: `Welcome, ${profile.shortname}!` };
 });
 
-export const register = query(
-	RegisterSchema,
-	async ({ last, first, middle, prefermiddle, email, phone, password }) => {
-		const saveuser = Users.create({
-			email,
-			hashedpassword: await hash(password + PASSWORD_PEPPER, 10),
-			attempts: 0
-		});
-		if (!saveuser.success) {
-			if (import.meta.env.DEV) console.error(saveuser.errors);
-			error(Status.CONFLICT, 'Existing Account Associated w/ Email Address');
-		}
+export const createSession = command(UserIDSchema, async (userID) => {
+	const client = getRequestEvent().getClientAddress();
 
-		const saveprofile = Profiles.create({
-			last,
-			first,
-			middle: middle ?? undefined,
-			prefermiddle,
-			email,
-			phone
-		});
-		if (!saveprofile.success) {
-			if (import.meta.env.DEV) console.error(saveprofile.errors);
-			error(Status.CONFLICT, 'Existing Account Associated w/ Email Address/Phone Number');
+	const existing =
+		SessionCookies.find(({ doc }) => doc.userID === userID || doc.client === client) ?? [];
+	if (existing.length > 1) {
+		for (const session of existing) {
+			const deleted = SessionCookies.delete(session);
+			if (!deleted.success) {
+				if (!PROD) console.error(deleted.errors);
+				error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+			}
+			existing.splice(existing.indexOf(session), 1);
 		}
-
-		return { message: `Account Created!` };
 	}
-);
 
-export const getUserID = query(async () => {
-	const { cookies } = getRequestEvent();
-	const encrypted = cookies.get(SESSION_COOKIE_KEY);
-	if (!encrypted) return;
-
-	const decrypted = decrypt(encrypted, COOKIE_ENCRYPTION_KEY);
-	const validate = await SessionCookieSchema.safeParseAsync(JSON.parse(decrypted));
-	if (!validate.success) {
+	const session = existing.at(0);
+	if (!session) {
+		const create = SessionCookies.create({ userID, client });
+		if (!create.success) {
+			if (!PROD) console.error(create.errors);
+			error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+		}
 		return;
 	}
 
-	return validate.data.userID;
+	session.refresh();
+	const save = SessionCookies.save(session);
+	if (!save.success) {
+		if (!PROD) console.error(save.errors);
+		error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+	}
 });
 
-export const userName = query(async () => {
+export const logout = command(async () => {
+	const client = getRequestEvent().getClientAddress();
+
 	const userID = await getUserID();
-	if (!validUserID(userID)) {
+	if (!validUserID(userID)) return;
+
+	const sessions = SessionCookies.find(({ doc }) => doc.userID === userID || doc.client === client);
+	if (!sessions) return;
+
+	for (const session of sessions) {
+		const deleted = SessionCookies.delete(session);
+		if (!deleted.success) {
+			if (!PROD) console.error(deleted.errors);
+			error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+		}
+	}
+
+	return { message: 'Logged Out' };
+});
+
+export const getSession = query(async () => {
+	const client = getRequestEvent().getClientAddress();
+
+	const session = SessionCookies.findOne({ client });
+	if (!session) return;
+
+	if (session.isExpired) {
+		if (!PROD) console.log('Session Expired');
+		const deleted = SessionCookies.delete(session);
+		if (!deleted.success) {
+			if (!PROD) console.error(deleted.errors);
+			error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
+		}
 		return;
 	}
 
-	const profile = Profiles.findOne(userID);
-	if (!profile) {
-		return;
+	session.refresh();
+	const save = SessionCookies.save(session);
+	if (!save.success) {
+		if (!PROD) console.error(save.errors);
+		error(Status.INTERNAL_SERVER_ERROR, 'Unable to Authenticate User');
 	}
 
-	if (import.meta.env.DEV) {
-		console.log({ function: "userName", userID, name: profile.shortname })
-	}
+	return session.json
+});
+
+export const authenticated = query(async () => {
+	const session = await getSession();
+	return !!session;
+});
+
+export const getUserID = query(async () => {
+	const session = await getSession();
+	if (!session) return;
+
+	return session.userID;
+});
+
+export const getProfile = query(async () => {
+	const userID = await getUserID();
+	if (!validUserID(userID)) return;
+
+	return Profiles.findOne(userID);
+});
+
+export const getUserName = query(async () => {
+	const session = await getSession();
+	if (!session) return;
+
+	const profile = Profiles.findOne(session.userID);
+	if (!profile) return;
 
 	return profile.shortname;
 });

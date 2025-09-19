@@ -4,7 +4,7 @@
     "": {
       "name": "rsvp",
       "dependencies": {
-        "@neisanworks/neisandb": "^0.1.4",
+        "@neisanworks/neisandb": "^0.1.12",
         "bcrypt": "^6.0.0",
         "better-sqlite3": "^11.8.0",
         "drizzle-orm": "^0.40.0",
@@ -159,7 +159,7 @@
 
     "@lucide/svelte": ["@lucide/svelte@0.515.0", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-CEAyqcZmNBfYzVgaRmK2RFJP5tnbXxekRyDk0XX/eZQRfsJmkDvmQwXNX8C869BgNeryzmrRyjHhUL6g9ZOHNA=="],
 
-    "@neisanworks/neisandb": ["@neisanworks/neisandb@0.1.4", "https://npm.pkg.github.com/download/@neisanworks/neisandb/0.1.4/484abbab0ce466078f6e86e6c73816f946c86d7e", { "dependencies": { "zod": "^4.1.5" } }, "sha512-uBAow1DIXa4vEE7JkUhOMGg2A3MtJCM2rLVOl0KVM9s6AXWBqQuKToHERhlP/hJk9NE9uKrlfRlP+p9cDfRy6A=="],
+    "@neisanworks/neisandb": ["@neisanworks/neisandb@0.1.12", "https://npm.pkg.github.com/download/@neisanworks/neisandb/0.1.12/a70f573a7ff1340eaae4c3cb10f8a8274e9acb6a", { "dependencies": { "zod": "^4.1.5" } }, "sha512-jd+oJgCzg+C0eGb13xcWfNovPjf20o/1QEghMqr+HS2hvNt1SKN+Ig4Kt6KaW4LTu9mkUoDu3do62sWEMAz2YA=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 

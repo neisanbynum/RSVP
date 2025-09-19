@@ -3,6 +3,7 @@ import z from "zod/v4"
 import { CreateEventSchema } from "$lib/remote/event.utils";
 import { AddressModel } from "$lib/remote/$common";
 import { formatDate } from "$lib/utils/common";
+import { EventJSONSchema } from "$lib/schemas/events";
 
 export const EventAttendeeSchema = z.object({
     user: z.number().min(0).optional(),
@@ -14,8 +15,8 @@ export type EventAttendeeSchema = typeof EventAttendeeSchema;
 export const EventSchema = z.object({
 	...CreateEventSchema.shape,
     creator: z.number().min(0),
-	moderators: z.array(z.number().min(0)),
-    attendees: z.array(EventAttendeeSchema),
+	moderators: z.array(z.number().min(0)).default([]),
+    attendees: z.array(EventAttendeeSchema).default([]),
 });
 export type EventSchema = typeof EventSchema
 
@@ -84,15 +85,12 @@ export class EventModel implements DBModelProperties<EventSchema> {
         return this.attendees.reduce((total, attendee) => total + attendee.total, 0);
     }
 
-    get json() {
-        const parse = EventSchema.safeParse(this);
-        if (!parse.success) throw new Error(parse.error.message);
-        return {
-            ...parse.data,
-            date: formatDate(this.date),
-            totalAttendees: this.totalAttendees,
-            items: this.items,
-            addressString: this.addressString
-        }
+    get json(): z.core.output<EventJSONSchema> {
+        const parse = EventJSONSchema.safeParse(this);
+        if (!parse.success) {
+            console.log(parse.error.message)
+            throw new Error(parse.error.message);
+        };
+        return parse.data
     }
 }

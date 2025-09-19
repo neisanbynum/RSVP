@@ -32,13 +32,13 @@
 		remotefunction: createEvent,
 		onsuccess: async ({ message }) => {
 			toast.success(message);
-			await createdEvents().refresh();
-			goto('/event/upcoming');
+			createdEvents().refresh();
+			goto('/secured/event/upcoming');
 		},
 		onerror: async (error) => {
 			if (isHttpError(error) && error.status === Status.UNAUTHORIZED) {
 				toast.error('User Not Authenticated');
-				await logout();
+				logout();
 				goto('/auth');
 			}
 		}
@@ -77,7 +77,7 @@
 						label="Go Back"
 						variant="secondary"
 						class="w-2/6"
-						onclick={() => goto('/event/upcoming')}
+						onclick={() => goto('/secured/event/upcoming')}
 					/>
 					<Button label="Create" class="w-3/6" />
 				</div>
