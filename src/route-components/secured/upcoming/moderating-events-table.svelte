@@ -1,21 +1,19 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { Text } from '$lib/components/custom';
 	import { Table, useTableData } from '$lib/components/custom/table';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { getCreatedEvents, getEventAccessCode } from '$lib/remote/event.remote';
+	import { getEventAccessCode, getModeratingEvents } from '$remote/event.remote';
 	import { toast } from 'svelte-sonner';
 
-	const created = $derived.by(
+	const moderating = $derived.by(
 		async () =>
 			await useTableData(
-				() => getCreatedEvents(),
+				() => getModeratingEvents(),
 				[
 					{ key: 'date', label: 'Date', class: 'w-fit' },
-					{ key: 'time', label: 'Time', class: 'w-fit', breakpoint: 'sm' },
+					{ key: 'time', label: 'Time', class: 'w-fit' },
 					{ key: 'title', label: 'Event', class: 'min-w-fit w-2/3' },
 					{ key: 'addressString', label: 'Location', class: 'min-w-fit w-1/3', breakpoint: 'lg' },
 					{ key: 'totalAttendees', label: 'Attendees', class: 'w-fit', breakpoint: 'sm' }
@@ -24,17 +22,12 @@
 	);
 </script>
 
-<div class="flex h-3/8 min-h-48 w-full flex-col items-start justify-center gap-4">
-	<div class="relative flex h-9 w-full items-end justify-center">
-		<Button
-			label="Create Event"
-			class="absolute left-0 w-32"
-			onclick={() => goto(resolve('/secured/event/create'))}
-		/>
-		<Text text="Created Events" class="text-lg font-semibold" />
+<div class="flex h-2/5 w-full flex-col items-start justify-center gap-4 lg:h-full lg:w-3/5">
+	<div class="flex h-9 w-full items-end justify-center">
+		<Text text="Moderating Events" class="text-lg font-semibold" />
 	</div>
-	{#await created}
-		<Skeleton class="flex h-full min-h-48 w-full" />
+	{#await moderating}
+		<Skeleton class="flex h-full w-full" />
 	{:then properties}
 		<Table {...properties} class="h-full w-full">
 			{#snippet action({ data })}
